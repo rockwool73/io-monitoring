@@ -1,0 +1,179 @@
+<HTML>
+<head>
+<title>IOMonitoring - Configuration</title>
+<link rel="stylesheet" type="text/css" href="css/stylesheet.css" title="Style">
+</head>
+<BODY>
+
+<H1>Configuration</H1>
+
+
+<h2>Constants</h2>
+
+Their are several constants and default values.<br/>
+<br/>
+<table border='0' cellspacing='3' cellpadding='3'>
+<tr>
+	<th>Name</th>
+	<th>Type</th>
+	<th>Value</th>
+</tr>
+<tr><td>DIRECTORY_NAME_ARCHIVE</td><td>String</td><td>.archive</td></tr>
+<tr><td>DIRECTORY_NAME_ERROR</td><td>String</td><td>.error</td></tr>
+<tr><td>DIRECTORY_NAME_PROCESS</td><td>String</td><td>.process</td></tr>
+<tr><td>FILE_DATE_FORMAT</td><td>String</td><td>yyyyMMdd_HHmmssSSS</td></tr>
+<tr><td>SUBDIRECTORY_DATE_FORMAT</td><td>String</td><td>yyyy-MM-dd</td></tr>
+<tr><td>LOCK_FILE_EXTENSION</td><td>String</td><td>.lock</td></tr>
+<tr><td>ERROR_FILE_EXTENSION</td><td>String</td><td>.errorlog</td></tr>
+</table>
+
+<h2>Generic</h2>
+For all IO monitoring module, these are common for them all.<br/>
+<br/>
+<table border='0' cellspacing='3' cellpadding='3'>
+<tr>
+	<th>Name</th>
+	<th>Type</th>
+	<th>Required</th>
+	<th>Default Value</th>
+	<th>Description</th>	
+</tr>
+<tr>
+	<td><b>directory</b></td>	
+	<td><i>java.io.File</i></td>
+	<td>YES</td>
+	<td><code>&nbsp;</code></td>
+	<td>The root local directory. Must be a valid directory where you can read and write.</td>
+</tr>
+<tr>
+	<td><b>fileProcessor</b></td>	
+	<td><i>dk.heick.io.monitoring.processor.FileProcessor</i></td>
+	<td>YES</td>
+	<td><code>&nbsp;</code></td>
+	<td>An implementation of the <tt>FileProcessor</tt> interface.</td>
+</tr>
+<tr>
+	<td><b>stableTime</b></td>	
+	<td><i>long</i></td>
+	<td>no</td>
+	<td><code>1500 (1.5 seconds)</code></td>
+	<td>How many milliseconds a file has be stable before we deem it save to process.</td>
+</tr>
+<tr>
+	<td><b>archiving</b></td>	
+	<td><i>boolean</i></td>
+	<td>no</td>
+	<td><code>true</code></td>
+	<td>Should a file be archived (<code>true</code>) or deleted (<code>false</code>) after successful processing.</td>
+</tr>
+<tr>
+	<td><b>maxMessagesPolling</b></td>	
+	<td><i>int</i></td>
+	<td>no</td>
+	<td><code>1000</code></td>
+	<td>The max number of files added to the file monitor before continue to the next to phases (monitoring and processing). <br/>
+		This is to avoid that is added huge number files (which can be slow) before start processing.<br/>
+		If below "1" than no limit.	
+	</td>
+</tr>
+<tr>
+	<td><b>maxProcessingTime</b></td>	
+	<td><i>long</i></td>
+	<td>no</td>
+	<td><code>30000 (30 seconds)</code></td>
+	<td>The maximum amout of time the processing phase must take before existing and waiting for another "runTask" execution.<br/>
+		This to avoid a that the "processing" step takes a long time before we start added and monitoring new files.<br/>
+		If below "1" than no limit.
+	</td>
+</tr>
+<tr>
+	<td><b>monitorTimeout</b></td>	
+	<td><i>long</i></td>
+	<td>no</td>
+	<td><code>3600000 (1 hour)</code></td>
+	<td>The maximum amount of time we will monitor a file before we deem it dead (has not been stable in the amount of time), and move it to ".error" directory.<br/>
+		If below "1" than no limit.
+	</td>
+</tr>
+<tr>
+	<td><b>fileErrorHandler</b></td>	
+	<td><i>dk.heick.io.monitoring.errorhandler.<br/>MonitorTaskFileErrorHandler</i></td>
+	<td>no</td>
+	<td><code>dk.heick.io.monitoring.errorhandler.<br/>DefaultMonitorTaskFileErrorHandler</code></td>
+	<td></td>
+</tr>
+<tr>
+	<td><b>lockFileTimeout </b></td>	
+	<td><i>long</i></td>
+	<td>No</td>
+	<td><code>1200000 (20 minuttes)</code></td>
+	<td></td>
+</tr>
+<tr>
+	<td><b></b></td>	
+	<td><i></i></td>
+	<td></td>
+	<td><code></code></td>
+	<td></td>
+</tr>
+<tr>
+	<td><b></b></td>	
+	<td><i></i></td>
+	<td></td>
+	<td><code></code></td>
+	<td></td>
+</tr>
+</table>
+
+
+<h2>File</h2>
+
+<table border='0' cellspacing='3' cellpadding='3'>
+<tr>
+	<th>Name</th>
+	<th>Type</th>
+	<th>Required</th>
+	<th>Default Value</th>
+	<th>Description</th>	
+</tr>
+<tr>
+	<td><b>fileFilter</b></td>	
+	<td><i>java.io.FileFilter</i></td>
+	<td>no</td>
+	<td><code>dk.heick.io.monitoring.filter.OnlyFilesFileFilter</code></td>
+	<td></td>
+</tr>
+</table>
+
+
+<h2>FTP</h2>
+<ul>
+	<li>private String host;</li>
+	<li>private int port;</li>
+	<li>private String username;</li>
+	<li>private String password;</li>
+	<li>private String remoteDirectory;</li>
+	<li>private FTPFileFilter ftpFileFilter;</li>
+	<li>private Integer ftpBufferSize=null;</li>
+	<li>private Integer ftpConnectTimeout=null;</li>
+	<li>private Integer ftpDataTimeout=null;</li>
+	<li>private Integer ftpDefaultTimeout=null;</li>
+	<li>private Boolean ftpKeepAlive=null;</li>
+	<li>private Proxy ftpProxy=null;</li>
+	<li>private Integer ftpSoTimeout=null;</li>
+	<li>private FTPFileType ftpFileType = FTPFileType.ASCII;</li>
+</ul>
+
+<h2>SFTP</h2>
+<ul>
+<li>private String host;</li>
+<li>private int port;</li>
+<li>private String username;</li>
+<li>private String password;</li>
+<li>private String remoteDirectory;</li>
+<li>private int connectTimeout=2000;</li>
+<li>private boolean strictHostKeyChecking=false;</li>
+</ul>
+
+</BODY>
+</HTML>

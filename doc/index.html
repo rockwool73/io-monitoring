@@ -1,0 +1,164 @@
+<HTML>
+<head>
+<title>IOMonitoring - Readme</title>
+<link rel="stylesheet" type="text/css" href="css/stylesheet.css" title="Style">
+</head>
+<BODY>
+
+<H1>IOMonitoring</H1>
+
+
+<h2>Synopsis</h2>
+This is a generic library to monitor a directory for new files an process them, this can either be a 
+<ul>
+	<li>file directory</li>
+	<li>ftp directory</li>
+	<li>sftp directory</li>
+</ul>
+<br/><br/>
+
+<h2>What do we wish to achieve?</h2>
+It is really quite simple, but hard to explain simply. <br/>
+We want a uniform way to monitor a directory for new files, when a file is "stable" we want to "process" the file and archive it.<br/>
+We can use this basis to also monitor FTP and SFTP directories.<br/>
+Where we monitor a (S)FTP directory for new files, when a file is "stable" we move it to a local directory; "process" the file and archive it.<br/>
+Lastly we want to make it as fail as possible. This means robust for multi thread environments, file locks and only process file when they are stable.
+
+
+<br/><br/>
+<h2>What do we do to achieve it?</h2>
+There is implemented a set of conventions. (READ this carefully)<br/>
+
+<ul>
+	<li>A MonitorTask must created with MonitorTaskConfiguration as input.<br/><br/></li>
+	<li>This MonitorTask must be added to a Timer which calls the "runTask" method. - Either :<br/><br/></li>
+	<ul>
+		<li>Create a EJB Timer</li>
+		<li>Make use of the MonitorTaskTimer class that comes with this library that uses java.util.Timer.<br/><br/></li>
+	</ul>
+	<li>There is always a "local" directory where in 3 directories is created ".process", ".archive" and ".error".<br/><br/></li>
+	<li>You will only have to supply an implementation of the FileProcessor interface.<br/> 
+	    This is what to do with a file once it is stable and ready to be processed.<br/><br/></li>
+	    
+	<li>When a MonitorTask is created, it validates its configuration and creates directories.<br/>
+	    Than it checkes the ".process" directory for files that was not complete done since the last "shutdown".<br/>
+		It removes any ".lock" files, so the files is ready for the next time "runTask" is run.<br/><br/></li>
+	    
+	<li>A file is stable when it last modified timestamp and file size hasnt change for X milliseconds and the file is not locked by other process. (configurable)<br/><br/></li>
+	    
+	<li>When a file has been deemed stable, it is moved to the ".process" directory.<br/><br/></li>
+		
+	<li>The "runTask" method has three methods is calls in succession : <br/><br/></li>
+	<ul>
+		<li><code>Dectection</code> : List files in the directory it shall monitor (with a Filter), add the files it has not registered to the monitor.<br/><br/></li>
+		<li><code>Monitoring</code> : Iterates over the files in the monitor at test if a file is in a stable state. If it is the file is moved to the ".process" directory.<br/>
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			For FTP and SFTP this part is in the "Detection" method since we need a FTP/SFTP Connection.<br/>
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			For FTP and SFTP this means when a remote FTP/SFTP file is stable it is moved to the local ".process" directory.<br/><br/>
+		</li>
+		<li><code>Processing</code> : Process the files in the ".process" directory using the FileProcessor implementation.<br/><br/></li>	
+	</ul> 
+	
+	<li>When a file is being processed there is several steps : <br/><br/></li>
+	<ul>
+		<li>If file in the ".process" directory and it has a file with the same name but added ".lock", it is assume that another thread is processing this.<br/><br/></li>
+		<li>If a ".lock" file has existed to long (configurable) it will the lock file will be delete and the file will be moved to the ".error" directory.<br/><br/></li>
+		<li>If file in the ".process" directory and it do not have a corresponding ".lock" file, than.<br/><br/></li>
+		<li>(1) A lock file is created.<br/><br/></li>
+		<li>(2) The method "FileProcessor().beforeProcess(context,file)" is called - <br/><br/></li>
+		<li>(3) The method "FileProcessor().process(context,file)" is called - <br/><br/></li>		
+		<li>(4a) The method "FileProcessor().onSuccess(context,start,file)" is called - <br/><br/></li>
+		<li>(4b) The method "FileProcessor().onError(context,start,file,exception)" is called - <br/><br/></li>
+		<li><br/><br/></li>
+		<li><br/><br/></li>
+	</ul>
+	    
+	<li>If a file is processed succesfully - FileProcessor did not throw an exception.<br/> 
+	    The file is moved to the ".archive" directory (configurable) in sub directory with yyyy-MM-dd (year-month-date). <br/>
+	    If archiving is turned off, the file is simple deleted.<br/><br/>
+	    </li>
+	    
+	<li>If a file is NOT processed succesfully - FileProcessor did throw an exception, or some IO error occured.<br/> 
+	     The file is moved to the ".error" directory (configurable) in sub directory with yyyy-MM-dd (year-month-date).<br/><br/></li>
+	<li>In addition to a file is moved to the ".error" directory, an extra file with the same filename (but with ".errorlog" added to the name) is written as well. <br/>
+		It contains the complete stacktract etc. for the error that has occured.<br/><br/></li>
+	<li>If a file with the same name already exists in the ".process", ".archive" or ".error" directories, the file name is preappended a random UUID.<br/><br/></li>
+	
+
+</ul>
+<br/><br/>
+
+
+<h2>Generic concepts</h2>
+
+<h3>Steps</h3>
+A "MonitoringTask" has 3(4) task steps that is run every time that a timer triggers it, either 
+using a "java.util.Timer" or a "EJBTimer". <br/><br/>
+<table border='0' cellspacing='3' cellpadding='3'>
+<tr>
+	<th>Step</th>
+	<th>Description</th>
+</tr>
+<tr>
+	<td valign='top'>0 - Initialization</td>
+	<td>Only run at MonitoringTask class construction. <br/>
+		This is validation of configuration.<br/>
+		Reinitialization of files that stopped processing during shutdown.
+	</td>
+</tr>
+<tr>
+	<td valign='top'>1 - Detection</td>
+	<td>Detecting new files, which hasnt been added to the "monitor" and monitoring detected files, for when the file is stable is enough to be processed.</td>
+</tr>
+<tr>
+	<td valign='top'>2 - Monitoring</td>
+	<td>Monitoring detected files, for when the file is stable is enough to be processed.</td>
+</tr>
+<tr>
+	<td valign='top'>3 - Processing</td>
+	<td>Processing a stable file.</td>
+</tr>
+</table>
+<br/><br/>
+
+<h3>Directories</h3>
+There is always 4 directories on a local directory.<br/>
+<br/>
+<table border='0' cellspacing='3' cellpadding='3'>
+<tr>
+	<th colspan='2'>Directory</th>
+	<th>Description</th>
+</tr>
+<tr>
+	<td colspan='2' valign='top'>[ROOT DIR]</td>
+	<td>(Directory) In where we detect files if it is a "file-io-monitoring" task.</td>
+</tr>
+<tr>
+	<td rowspan='3'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td valign='top'>.process</td>
+	<td>(Directory) In where stable files is moved for processing in Step 1/2.</td>
+</tr>
+<tr>	
+	<td valign='top'>.error</td>
+	<td>(Directory) In where files is moved if their is an error either on moving or processing, is always stored in directory "yyyyMMdd".</td>
+</tr>
+<tr>	
+	<td valign='top'>.archive</td>
+	<td>(Directory) In where files is moved (Step 3) when they are succesfully processed, is always stored in directory "yyyyMMdd".<br/>
+		Only stored here is "isArcheving()" is "true", otherwise the file is delete afterwards.
+	</td>
+</tr>
+</table>
+<br/><br/>
+
+<h3>File Stability</h3>
+A file is stable when 
+<ul>
+	<li>file size</li>
+	<li>last modified timestamp</li>
+</ul>
+hasnt change for X milliseconds. (stableTime) Which you can configure. 
+<br/><br/>
+</BODY>
+</HTML>
